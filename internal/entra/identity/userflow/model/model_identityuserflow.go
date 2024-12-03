@@ -33,7 +33,7 @@ type IdentityUserFlow interface {
 var _ IdentityUserFlow = BaseIdentityUserFlowImpl{}
 
 type BaseIdentityUserFlowImpl struct {
-	UserFlowType *UserFlowType `json:"userFlowType,omitempty"`
+	// UserFlowType *UserFlowType `json:"userFlowType,omitempty"`
 
 	// Fields inherited from Entity
 
@@ -102,7 +102,7 @@ func (s BaseIdentityUserFlowImpl) MarshalJSON() ([]byte, error) {
 	}
 
 	if !s.OmitDiscriminatedValue {
-		decoded["@odata.type"] = "#microsoft.graph.identityUserFlow"
+		decoded["@odata.type"] = "#microsoft.graph.externalUsersSelfServiceSignUpEventsFlow"
 	}
 
 	encoded, err = json.Marshal(decoded)

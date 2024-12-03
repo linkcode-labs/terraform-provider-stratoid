@@ -3,23 +3,28 @@ package userflows
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"terraform-provider-stratoid/internal/clients"
 	"terraform-provider-stratoid/internal/entra/identity/userflow"
 	"terraform-provider-stratoid/internal/entra/identity/userflow/model"
 
+	"terraform-provider-stratoid/internal/helpers/consistency"
 	"terraform-provider-stratoid/internal/helpers/tf"
 	"terraform-provider-stratoid/internal/helpers/tf/pluginsdk"
 
+	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/lang/response"
+	"github.com/hashicorp/go-azure-sdk/sdk/nullable"
 )
 
 func userFlowResource() *pluginsdk.Resource {
 	return &pluginsdk.Resource{
-		// CreateContext: userFlowResourceCreate,
-		ReadContext: userFlowResourceRead,
+		CreateContext: userFlowResourceCreate,
+		ReadContext:   userFlowResourceRead,
 		// UpdateContext: userFlowResourceUpdate,
 		DeleteContext: userFlowResourceDelete,
 
@@ -61,74 +66,74 @@ func userFlowResource() *pluginsdk.Resource {
 	}
 }
 
-// func userFlowResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta interface{}) pluginsdk.Diagnostics {
-// 	client := meta.(*clients.Client).UserFlows.UserFlowClient
+func userFlowResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta interface{}) pluginsdk.Diagnostics {
+	client := meta.(*clients.Client).UserFlows.UserFlowClient
 
-// 	displayName := d.Get("display_name").(string)
+	displayName := d.Get("display_name").(string)
 
-// 	options := userflow.ListUserFlowOperationOptions{
-// 		Filter: pointer.To(fmt.Sprintf("displayName eq '%s'", displayName)),
-// 	}
-// 	if resp, err := client.ListUserFlows(ctx, options); err != nil {
-// 		return tf.ErrorDiagF(err, "Checking for existing user flow attribute")
-// 	} else if resp.Model != nil {
-// 		for _, r := range *resp.Model {
-// 			model := r.IdentityUserFlow()
-// 			if model.Id != nil && strings.EqualFold(model.DisplayName.GetOrZero(), displayName) {
-// 				return tf.ImportAsExistsDiag("entra_user_flow", *model.Id)
-// 			}
-// 		}
-// 	}
+	options := userflow.ListUserFlowOperationOptions{
+		Filter: pointer.To(fmt.Sprintf("displayName eq '%s'", displayName)),
+	}
+	if resp, err := client.ListUserFlows(ctx, options); err != nil {
+		return tf.ErrorDiagF(err, "Checking for existing user flow attribute")
+	} else if resp.Model != nil {
+		for _, r := range *resp.Model {
+			model := r.IdentityUserFlow()
+			if model.Id != nil && strings.EqualFold(model.DisplayName.GetOrZero(), displayName) {
+				return tf.ImportAsExistsDiag("entra_user_flow", *model.Id)
+			}
+		}
+	}
 
-// 	oDataType := "#microsoft.graph.externalUsersSelfServiceSignUpEventsFlow"
+	oDataType := "#microsoft.graph.externalUsersSelfServiceSignUpEventsFlow"
 
-// 	flow := model.BaseIdentityUserFlowImpl{
-// 		ODataType:   &oDataType,
-// 		DisplayName: nullable.NoZero(displayName),
-// 		OnInteractiveAuthFlowStart: &model.OnInteractiveAuthFlowStart{
-// 			ODataType:       "#microsoft.graph.onInteractiveAuthFlowStartExternalUsersSelfServiceSignUp",
-// 			IsSignUpAllowed: true,
-// 		},
-// 		OnAuthenticationMethodLoadStart: &model.OnAuthenticationMethodLoadStart{
-// 			IdentityProviders: &[]model.IdentityProvider{{Id: nullable.NoZero("EmailPassword-OAUTH")}},
-// 			ODataType:         "#microsoft.graph.onAuthenticationMethodLoadStartExternalUsersSelfServiceSignUp",
-// 		},
-// 	}
+	flow := model.BaseIdentityUserFlowImpl{
+		ODataType:   &oDataType,
+		DisplayName: nullable.NoZero(displayName),
+		OnInteractiveAuthFlowStart: &model.OnInteractiveAuthFlowStart{
+			ODataType:       "#microsoft.graph.onInteractiveAuthFlowStartExternalUsersSelfServiceSignUp",
+			IsSignUpAllowed: true,
+		},
+		OnAuthenticationMethodLoadStart: &model.OnAuthenticationMethodLoadStart{
+			IdentityProviders: &[]model.IdentityProvider{{Id: nullable.NoZero("EmailPassword-OAUTH")}},
+			ODataType:         "#microsoft.graph.onAuthenticationMethodLoadStartExternalUsersSelfServiceSignUp",
+		},
+	}
 
-// 	resp, err := client.CreateUserFlow(ctx, flow, userflow.DefaultCreateUserFlowOperationOptions())
-// 	if err != nil {
-// 		return tf.ErrorDiagF(err, "Creating user flow")
-// 	}
+	resp, err := client.CreateUserFlow(ctx, flow, userflow.DefaultCreateUserFlowOperationOptions())
+	if err != nil {
+		return tf.ErrorDiagF(err, "Creating user flow")
+	}
 
-// 	if resp.Model == nil {
-// 		return tf.ErrorDiagF(errors.New("model was nil"), "Creating user flow")
-// 	}
+	if resp.Model == nil {
+		return tf.ErrorDiagF(errors.New("model was nil"), "Creating user flow")
+	}
 
-// 	userFlow := resp.Model.IdentityUserFlow()
+	userFlow := resp.Model.IdentityUserFlow()
 
-// 	if userFlow.Id == nil || *userFlow.Id == "" {
-// 		return tf.ErrorDiagF(errors.New("API returned user flow with nil ID"), "Bad API Response")
-// 	}
+	if userFlow.Id == nil || *userFlow.Id == "" {
+		return tf.ErrorDiagF(errors.New("API returned user flow with nil ID"), "Bad API Response")
+	}
 
-// 	id := model.NewIdentityUserFlowID(*userFlow.Id)
-// 	d.SetId(id.ID())
+	id := model.NewIdentityUserFlowID(*userFlow.Id)
+	d.SetId(id.ID())
 
-// 	// Now ensure we can retrieve the attribute consistently
-// 	if err = consistency.WaitForUpdate(ctx, func(ctx context.Context) (*bool, error) {
-// 		resp, err := client.GetUserFlow(ctx, id, userflow.DefaultGetUserFlowOperationOptions())
-// 		if err != nil {
-// 			if response.WasNotFound(resp.HttpResponse) {
-// 				return pointer.To(false), nil
-// 			}
-// 			return pointer.To(false), err
-// 		}
-// 		return pointer.To(resp.Model != nil), nil
-// 	}); err != nil {
-// 		return tf.ErrorDiagF(err, "Waiting for creation of %s", id)
-// 	}
+	// Now ensure we can retrieve the attribute consistently
+	if err = consistency.WaitForUpdate(ctx, func(ctx context.Context) (*bool, error) {
+		resp, err := client.GetUserFlow(ctx, id, userflow.DefaultGetUserFlowOperationOptions())
+		if err != nil {
+			if response.WasNotFound(resp.HttpResponse) {
+				return pointer.To(false), nil
+			}
+			return pointer.To(false), err
+		}
+		return pointer.To(resp.Model != nil), nil
+	}); err != nil {
+		return tf.ErrorDiagF(err, "Waiting for creation of %s", id)
+	}
 
-// 	return userFlowResourceRead(ctx, d, meta)
-// }
+	return userFlowResourceRead(ctx, d, meta)
+}
 
 // func userFlowResourceUpdate(ctx context.Context, d *pluginsdk.ResourceData, meta interface{}) pluginsdk.Diagnostics {
 // 	client := meta.(*clients.Client).UserFlows.UserFlowAttributeClient
