@@ -4,13 +4,10 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"log"
-
 	"terraform-provider-stratoid/internal/provider"
 
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
 var (
@@ -28,17 +25,11 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	opts := providerserver.ServeOpts{
-		// TODO: Update this string with the published name of your provider.
-		// Also update the tfplugindocs generate command to either remove the
-		// -provider-name flag or set its value to the updated provider name.
-		Address: "stratoid.dev/terraform/azure",
-		Debug:   debug,
+	opts := &plugin.ServeOpts{
+		Debug:        false,
+		ProviderAddr: "stratoid.dev/azure/stratoid",
+		ProviderFunc: provider.EntraExternalId,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New(version), opts)
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	plugin.Serve(opts)
 }

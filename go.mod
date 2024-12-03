@@ -11,6 +11,12 @@ require (
 )
 
 require (
+	github.com/hashicorp/go-azure-helpers v0.66.2 // indirect
+	golang.org/x/oauth2 v0.22.0 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
+)
+
+require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
@@ -19,6 +25,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-azure-sdk/sdk v0.20241128.1112539
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320 // indirect
