@@ -62,6 +62,15 @@ func userFlowResource() *pluginsdk.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
+			"identity_providers": {
+				Description: "The identity providers for the user flow attribute.",
+				Type:        pluginsdk.TypeList,
+				Elem: &pluginsdk.Schema{
+					Type: pluginsdk.TypeString,
+				},
+				Required: true,
+				ForceNew: true,
+			},
 		},
 	}
 }
@@ -87,6 +96,12 @@ func userFlowResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta
 
 	oDataType := "#microsoft.graph.externalUsersSelfServiceSignUpEventsFlow"
 
+	identityProviders := []model.IdentityProvider{}
+
+	for _, idp := range d.Get("identity_providers").([]interface{}) {
+		identityProviders = append(identityProviders, model.IdentityProvider{Id: nullable.NoZero(idp.(string))})
+	}
+
 	flow := model.BaseIdentityUserFlowImpl{
 		ODataType:   &oDataType,
 		DisplayName: nullable.NoZero(displayName),
@@ -95,7 +110,7 @@ func userFlowResourceCreate(ctx context.Context, d *pluginsdk.ResourceData, meta
 			IsSignUpAllowed: true,
 		},
 		OnAuthenticationMethodLoadStart: &model.OnAuthenticationMethodLoadStart{
-			IdentityProviders: &[]model.IdentityProvider{{Id: nullable.NoZero("EmailPassword-OAUTH")}},
+			IdentityProviders: &identityProviders,
 			ODataType:         "#microsoft.graph.onAuthenticationMethodLoadStartExternalUsersSelfServiceSignUp",
 		},
 	}
